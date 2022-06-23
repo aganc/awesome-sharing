@@ -5,11 +5,19 @@ import (
 	"sync"
 )
 
+// 线程安全的计数器类型
+type Counter struct {
+	mu sync.Mutex
+	count uint64
+}
+
 func main() {
-	var counter MyCounter
+	// 封装好的计数器
+	var counter Counter
 	// 使用WaitGroup等待10个goroutine完成
 	var wg sync.WaitGroup
 	wg.Add(10)
+	// 启动10个goroutine
 	for i := 0; i < 10; i++ {
 		go func() {
 			defer wg.Done()
@@ -19,27 +27,19 @@ func main() {
 			}
 		}()
 	}
-
 	wg.Wait()
 	fmt.Println(counter.Count())
-
-
 }
-// 一个线程安全的计数器
-type MyCounter struct {
-	mu sync.RWMutex
-	count uint64
-}
-// 使用写锁保护
-func (c *MyCounter) Incr() {
+
+// 加1的方法，内部使用互斥锁保护
+func (c *Counter) Incr() {
 	c.mu.Lock()
 	c.count++
 	c.mu.Unlock()
 }
-// 使用读锁保护
-func (c *MyCounter) Count() uint64 {
-	c.mu.RLocker()
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+// 得到计数器的值，也需要锁保护
+func (c *Counter) Count() uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	return c.count
 }
